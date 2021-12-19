@@ -197,6 +197,6 @@ export async function getAllSourceUrls(page: Page, url: string) {
   return uniqueUrl(urls);
 }
 
-export async function sleep() {
+export async function sleep(delay: number) {
   return new Promise((resolve) => setTimeout(resolve, delay));
 }

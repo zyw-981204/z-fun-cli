@@ -104,7 +104,8 @@
       "node",
       "minimist",
       "chalk",
-      "fs-extra"
+      "fs-extra",
+      "url-join"
     ]
   },
   "include": [

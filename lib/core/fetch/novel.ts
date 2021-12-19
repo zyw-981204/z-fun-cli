@@ -1,15 +1,28 @@
 import puppeteer from "puppeteer";
-import { outputFileSync, remove } from "fs-extra";
+import { outputFileSync, remove, existsSync } from "fs-extra";
 const { sleep } = require("./tool");
 const startTime = new Date();
-import { join } from "path";
-import { log, error, stopSpinner, resumeSpinner, failSpinner } from "../../cli-shared-utils";
+import { join, isAbsolute } from "path";
+const urljoin = require("url-join");
 
-import pRetry from "p-retry";
-
+import {
+  log,
+  error,
+  stopSpinner,
+  resumeSpinner,
+  failSpinner,
+  done,
+  info,
+  logWithSpinner,
+} from "../../cli-shared-utils";
+import { selectMap, replaceThings, timeout } from "../fetch/constant";
+const CWD = process.cwd();
 import pLimit from "p-limit";
-const limit = pLimit(4);
+import { pRetryConsumer, pRetryProvider } from "./p-tools";
+const limit = pLimit(3);
 let i = 0;
+
+const map = new Map<number, string>();
 
 // 使用 puppeteer 访问网址，获取对应内容
 /**
@@ -20,17 +33,19 @@ let i = 0;
  * @param savetxt 保存text的函数
  */
 async function fetch(page: puppeteer.Page, aas: string[], i: number, savetxt: (value: string) => void) {
-  await page.goto(aas[i]);
+  await page.goto(aas[i], {
+    timeout,
+  });
   const err = await page.waitForSelector("#content", {
-    timeout: 5000,
+    timeout,
   });
   let txt = await page.$eval("#content", (c) => c.textContent);
-  txt = txt.replace(/readx\(\);\s*/g, "");
-  txt = txt.replace(
-    "亲,点击进去,给个好评呗,分数越高更新越快,据说给新笔趣阁打满分的最后都找到了漂亮的老婆哦!手机站全新改版升级地址：https://m.xbiquge.la，数据和书签与电脑站同步，无广告清新阅读！",
-    ""
-  );
-  await savetxt(`${txt}\n`);
+  let title = await page.$eval("h1", (c) => c.textContent);
+  replaceThings.forEach((value) => {
+    txt = txt.replace(value, "");
+  });
+
+  map.set(i, `${title}\n ${txt}\n`);
   await sleep(10);
 }
 
@@ -42,72 +57,139 @@ function getMinutes(ms: number) {
  * @param target 访问的地址
  * @param downloadPath 下载的文件夹的位置
  */
-export default async function fetchNovel(
-  target: string = "https://www.xbiquge.la/1/1710/",
-  downloadPath: string = join(process.cwd(), "download")
-) {
+
+export type TFetchNovelOption = {
+  fetchTarget: string;
+  outputFileDir: string;
+  novelName: string;
+  headless: boolean;
+  quantity: number;
+};
+export default async function fetchNovel(option: TFetchNovelOption) {
+  const {
+    novelName: diyNovelName,
+    fetchTarget: target = "https://www.xbiquge.la/48/48900/",
+    outputFileDir: downloadPath = join(CWD, "fetch"),
+    headless = false,
+    quantity,
+  } = option;
   try {
     (async () => {
       try {
-        await remove(`${downloadPath}/novels/斗罗大陆.txt`);
+        // 开始先清空文件夹
         const browser = await puppeteer.launch({
-          headless: false,
+          headless: headless,
         });
+        // 打开新的标签页
         const page = await browser.newPage();
-        await page.goto(target);
-        await page.waitForSelector("#list");
+        await page.goto(target, {
+          waitUntil: "domcontentloaded",
+        });
+        const isXbiquge = target.includes("xbiquge.la");
+
+        const content = await page.content();
+
+        console.log("content", content);
+
         const urlStr = await page.url();
         const arr = urlStr.match(/((http|https):\/\/)([^\/]+)(\/\S*)/);
-        const prefix = `${arr[1]}${arr[3]}`;
 
-        const aas = await page.$$eval(
-          "#list > dl > dd  a",
-          (aas, prefix) => aas.map((a) => prefix + a.getAttribute("href")),
-          prefix
+        // 新笔趣阁和笔趣阁网页前缀不一致
+
+        const prefix = isXbiquge ? `${arr[1]}${arr[3]}` : urlStr;
+        const aSelector = selectMap[isXbiquge ? "xbiquge" : "biquge"].aSelector;
+
+        let aas = (await page.$$eval<string[]>(aSelector, (aas) => aas.map((a) => a.getAttribute("href")))).map((a) =>
+          urljoin(prefix, a)
         );
+
+        console.log("aas", aas);
+        console.log("quantity", quantity);
+
+        if (quantity && quantity > 0) {
+          aas = aas.slice(0, quantity);
+        }
+
+        console.log("aas", aas);
+
+        // gotNovelName 获取小说名称
+        const titleSelectoror = selectMap[isXbiquge ? "xbiquge" : "biquge"].titleSelector;
+
+        log();
+        log("titleSelectoror" + titleSelectoror);
+        let novelName;
         try {
+          novelName = diyNovelName
+            ? diyNovelName
+            : await page.$eval("h1", (h1) => h1.textContent, {
+                timeout,
+              });
+
+          info("小说名称为" + novelName);
+        } catch (e) {
+          error("获取小说名字超时");
+        }
+
+        const outputFileDir = isAbsolute(downloadPath) ? downloadPath : join(CWD, downloadPath);
+        const outputFilePath = `${outputFileDir}/${novelName}.txt`;
+        info(`文件保存路径   \n outputFilePath`);
+
+        if (existsSync(outputFilePath)) {
+          await remove(outputFilePath);
+          info("文件清除完成" + outputFilePath);
+        }
+        await page.close();
+
+        try {
+          const pool = [];
           for (let i = 0; i < aas.length; i++) {
-            resumeSpinner();
-            const run = async () => {
-              try {
-                return await fetch(page, aas, i, savetxt);
-              } catch (err) {
-                error("网络错误");
-                stopSpinner();
-                await sleep(1000 * 2);
-                throw new Error("下载链接超时");
-              }
-            };
-            await pRetry(run, {
-              retries: 10,
-              onFailedAttempt: (error) => {
-                console.log(`Attempt ${error.attemptNumber} failed. There are ${error.retriesLeft} retries left.`);
-              },
-            });
+            pool.push(
+              limit(async () => {
+                resumeSpinner();
+                const _page = await browser.newPage();
+                const innerFn = async () => await fetch(_page, aas, i, savetxt);
+                const run = pRetryProvider(innerFn);
+                await pRetryConsumer(run);
+                await _page.close();
+                logWithSpinner(`${i} 访问完成`);
+              })
+            );
           }
+          info(` 已获取所有需要访问的链接,总数量为 ${pool.length} `);
+          log("fetch 完成");
+          await Promise.all(pool);
+          log("开始写入文件");
+          Array.from(map.entries())
+            .sort(([a], [b]) => {
+              return a - b;
+            })
+            .forEach(([, text]) => {
+              savetxt(text);
+            });
         } catch (err) {
           console.log("error", err);
         }
         const endDate = new Date();
-        console.log("总共耗时", getMinutes(endDate - startTime));
+        info("总共耗时", getMinutes(endDate - startTime));
         await browser.close();
         async function savetxt(txt: string) {
-          outputFileSync(`${downloadPath}/novels/斗罗大陆.txt`, txt, {
+          outputFileSync(outputFilePath, txt, {
             flag: "a",
           });
-          log(`写入完成 ${i++}`);
+          logWithSpinner(`${i++} 写入完成 `);
         }
-      } catch (err) {
-        console.log("our error", err);
-        failSpinner("网络错误");
-        error("网络错误");
+        done("下载完成");
+        stopSpinner();
+        process.exit(1);
+      } catch (e) {
+        failSpinner(e);
+        error(e);
         process.exit(1);
       }
     })();
-  } catch (err) {
-    console.log("our error", err);
-    failSpinner("网络错误");
-    error("网络错误");
+  } catch (e) {
+    error(e);
+    failSpinner(e);
     process.exit(1);
   }
 }

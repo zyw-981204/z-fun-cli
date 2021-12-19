@@ -1,10 +1,11 @@
 import { program } from "commander";
 
-import { logWithSpinner, stopSpinner, chalk, log, chalkTag } from "./cli-shared-utils";
+import { logWithSpinner, stopSpinner, chalk, log, chalkTag, info } from "./cli-shared-utils";
 import enhanceErrorMessages from "./core/command/enhanceErrorMessages";
 import { suggestCommands } from "./core/command/suggestCommand";
 
-import fetchNovel from "./core/fetch/novel";
+import fetchNovel, { TFetchNovelOption } from "./core/fetch/novel";
+import { sleep } from "./core/fetch/tool";
 
 // pkg 的相对位置应该考虑 编译后的文件
 // 路径为dist/lib/index.js
@@ -28,15 +29,22 @@ program
   });
 
 program
-  .command("fetch <novelId>")
+  .command("fetch <fetchTarget>")
   .description("下载小说")
-  .option("-p path <path>", "save in which path")
-  .option("-u url <url>", "url")
-  .option("-n -name <name>", "download text name")
-  .action(async (novelId, options: { path?: string; url: string; name: string }) => {
-    log("开始下载小说" + novelId);
-    logWithSpinner(`fetch ${chalk.yellow(novelId)}`);
-    await fetchNovel();
+  .option("-p --outputFileDir <outputFileDir>", "save in which path")
+  .option("-n --novelName <novelName>", "download text name")
+  .option("--headless", "is open the chrome hadless")
+  .option("-q --quantity <quantity>", "download novel 数量")
+  .action(async (fetchTarget, options: Omit<TFetchNovelOption, "fetchTarget">) => {
+    console.log("fetchTarget", fetchTarget);
+    console.log("options", options);
+    log("--------------开始下载小说--------------------------");
+    log("开始下载小说" + fetchTarget);
+    logWithSpinner(`fetch ${chalk.yellow(fetchTarget)}`);
+    await fetchNovel({
+      fetchTarget,
+      ...options,
+    });
   });
 
 // command --help
