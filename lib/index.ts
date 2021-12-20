@@ -1,15 +1,22 @@
 import { program } from "commander";
 
-import { logWithSpinner, stopSpinner, chalk, log, chalkTag, info } from "./cli-shared-utils";
+import {
+  logWithSpinner,
+  stopSpinner,
+  chalk,
+  log,
+  chalkTag,
+  info,
+} from "./cli-shared-utils";
 import enhanceErrorMessages from "./core/command/enhanceErrorMessages";
 import { suggestCommands } from "./core/command/suggestCommand";
 
-import fetchNovel, { TFetchNovelOption } from "./core/fetch/novel";
-import { sleep } from "./core/fetch/tool";
+import type { TFetchNovelOption } from "./core/fetch/novel";
+import fetchNovel from "./core/fetch/novel";
 
 // pkg 的相对位置应该考虑 编译后的文件
 // 路径为dist/lib/index.js
-const pkg = require("../../package.json");
+const pkg = require("../package.json");
 const version = pkg.version;
 
 // set version
@@ -21,7 +28,8 @@ program
   .description("utils test command")
   .option("-t --time <value>", "you can spinner form times")
   .action(async (options: { time?: string }) => {
-    const sleep = async (delay: number) => await new Promise((resolve) => setTimeout(resolve, delay));
+    const sleep = async (delay: number) =>
+      await new Promise((resolve) => setTimeout(resolve, delay));
     logWithSpinner("睡觉中");
     await sleep(Number(options.time));
     stopSpinner(true);
@@ -35,20 +43,35 @@ program
   .option("-n --novelName <novelName>", "download text name")
   .option("--headless", "is open the chrome hadless")
   .option("-q --quantity <quantity>", "download novel 数量")
-  .action(async (fetchTarget, options: Omit<TFetchNovelOption, "fetchTarget">) => {
-    console.log("fetchTarget", fetchTarget);
-    console.log("options", options);
-    log("--------------开始下载小说--------------------------");
-    log("开始下载小说" + fetchTarget);
-    logWithSpinner(`fetch ${chalk.yellow(fetchTarget)}`);
-    await fetchNovel({
-      fetchTarget,
-      ...options,
-    });
+  .action(
+    async (
+      fetchTarget: string,
+      options: Omit<TFetchNovelOption, "fetchTarget">
+    ) => {
+      console.log("fetchTarget", fetchTarget);
+      console.log("options", options);
+      log("--------------开始下载小说--------------------------");
+      log("开始下载小说" + fetchTarget);
+      logWithSpinner(`fetch ${chalk.yellow(fetchTarget)}`);
+      await fetchNovel({
+        fetchTarget,
+        ...options,
+      });
+    }
+  );
+
+program
+  .command("create <appname>")
+  .description("创建 app")
+  .action(async () => {
+    require("./core/create/index");
   });
 
-// command --help
-program.commands.forEach((c) => c.on("--help", () => console.log()));
+// command --help --no-debugger
+program.commands.forEach((c) => {
+  c.on("--help", () => console.log());
+  c.option("--no-debugger", "if debugger, debugger log will be enabled");
+});
 
 // output help information on unknown commands
 program.on("command:*", ([cmd]) => {
@@ -70,7 +93,8 @@ enhanceErrorMessages("unknownOption", (optionName: string) => {
 
 enhanceErrorMessages("optionMissingArgument", (option: any, flag: any) => {
   return (
-    `Missing required argument for option ${chalk.yellow(option.flags)}` + (flag ? `, got ${chalk.yellow(flag)}` : ``)
+    `Missing required argument for option ${chalk.yellow(option.flags)}` +
+    (flag ? `, got ${chalk.yellow(flag)}` : ``)
   );
 });
 program.parse(process.argv);

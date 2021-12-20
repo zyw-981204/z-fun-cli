@@ -16,10 +16,11 @@ import {
   logWithSpinner,
 } from "../../cli-shared-utils";
 import { selectMap, replaceThings, timeout } from "../fetch/constant";
-const CWD = process.cwd();
+const cwd = process.cwd();
 import pLimit from "p-limit";
 import { pRetryConsumer, pRetryProvider } from "./p-tools";
-const limit = pLimit(3);
+import { setSlient } from "../../cli-shared-utils/lib/silence";
+const limit = pLimit(4);
 let i = 0;
 
 const map = new Map<number, string>();
@@ -32,7 +33,12 @@ const map = new Map<number, string>();
  * @param i 第i个链接
  * @param savetxt 保存text的函数
  */
-async function fetch(page: puppeteer.Page, aas: string[], i: number, savetxt: (value: string) => void) {
+async function fetch(
+  page: puppeteer.Page,
+  aas: string[],
+  i: number,
+  savetxt: (value: string) => void
+) {
   await page.goto(aas[i], {
     timeout,
   });
@@ -40,7 +46,7 @@ async function fetch(page: puppeteer.Page, aas: string[], i: number, savetxt: (v
     timeout,
   });
   let txt = await page.$eval("#content", (c) => c.textContent);
-  let title = await page.$eval("h1", (c) => c.textContent);
+  const title = await page.$eval("h1", (c) => c.textContent);
   replaceThings.forEach((value) => {
     txt = txt.replace(value, "");
   });
@@ -64,15 +70,21 @@ export type TFetchNovelOption = {
   novelName: string;
   headless: boolean;
   quantity: number;
+  isDebugger: boolean;
 };
+
 export default async function fetchNovel(option: TFetchNovelOption) {
   const {
     novelName: diyNovelName,
     fetchTarget: target = "https://www.xbiquge.la/48/48900/",
-    outputFileDir: downloadPath = join(CWD, "fetch"),
+    outputFileDir: downloadPath = join(cwd, "fetch"),
     headless = false,
     quantity,
+    isDebugger = false,
   } = option;
+  if (isDebugger) {
+    setSlient(false);
+  }
   try {
     (async () => {
       try {
@@ -89,8 +101,6 @@ export default async function fetchNovel(option: TFetchNovelOption) {
 
         const content = await page.content();
 
-        console.log("content", content);
-
         const urlStr = await page.url();
         const arr = urlStr.match(/((http|https):\/\/)([^\/]+)(\/\S*)/);
 
@@ -99,21 +109,21 @@ export default async function fetchNovel(option: TFetchNovelOption) {
         const prefix = isXbiquge ? `${arr[1]}${arr[3]}` : urlStr;
         const aSelector = selectMap[isXbiquge ? "xbiquge" : "biquge"].aSelector;
 
-        let aas = (await page.$$eval<string[]>(aSelector, (aas) => aas.map((a) => a.getAttribute("href")))).map((a) =>
-          urljoin(prefix, a)
-        );
+        let aas = (
+          await page.$$eval<string[]>(aSelector, (aas) =>
+            aas.map((a) => a.getAttribute("href"))
+          )
+        ).map((a) => urljoin(prefix, a));
 
-        console.log("aas", aas);
         console.log("quantity", quantity);
 
         if (quantity && quantity > 0) {
           aas = aas.slice(0, quantity);
         }
 
-        console.log("aas", aas);
-
         // gotNovelName 获取小说名称
-        const titleSelectoror = selectMap[isXbiquge ? "xbiquge" : "biquge"].titleSelector;
+        const titleSelectoror =
+          selectMap[isXbiquge ? "xbiquge" : "biquge"].titleSelector;
 
         log();
         log("titleSelectoror" + titleSelectoror);
@@ -130,7 +140,9 @@ export default async function fetchNovel(option: TFetchNovelOption) {
           error("获取小说名字超时");
         }
 
-        const outputFileDir = isAbsolute(downloadPath) ? downloadPath : join(CWD, downloadPath);
+        const outputFileDir = isAbsolute(downloadPath)
+          ? downloadPath
+          : join(cwd, downloadPath);
         const outputFilePath = `${outputFileDir}/${novelName}.txt`;
         info(`文件保存路径   \n outputFilePath`);
 
@@ -170,7 +182,7 @@ export default async function fetchNovel(option: TFetchNovelOption) {
           console.log("error", err);
         }
         const endDate = new Date();
-        info("总共耗时", getMinutes(endDate - startTime));
+        info("总共耗时" + getMinutes(endDate - startTime) + "minutes");
         await browser.close();
         async function savetxt(txt: string) {
           outputFileSync(outputFilePath, txt, {

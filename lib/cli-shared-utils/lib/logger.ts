@@ -2,12 +2,13 @@ import chalk from "chalk";
 import readline from "readline";
 const EventEmitter = require("events");
 import stripAnsi from "strip-ansi";
+import { judgeIsSlient } from "./silence";
 
 import { stopSpinner } from "./spinner";
 
 export const events = new EventEmitter();
 
-type TLogType = "log" | "info" | "done" | "warn" | "error";
+type TLogType = "log" | "info" | "done" | "warn" | "error" | "debug";
 function _log(type: TLogType, tag: any, message: string) {
   if (process.env.VUE_CLI_API_MODE && message) {
     events.emit("log", {
@@ -58,6 +59,12 @@ export const error = (msg: any, tag = null) => {
     console.error(msg.stack);
     _log("error", tag, msg.stack);
   }
+};
+
+export const debug = (msg: any, tag = null) => {
+  const isSlient = judgeIsSlient();
+  if (!isSlient) console.log(format(chalk.bgBlue(" debug ") + (tag ? chalkTag(tag) : ""), chalk.blue(msg)));
+  _log("debug", tag, msg);
 };
 
 export const clearConsole = (title: string) => {
