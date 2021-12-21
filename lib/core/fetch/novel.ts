@@ -1,5 +1,11 @@
 import puppeteer from "puppeteer";
-import { outputFileSync, remove, existsSync } from "fs-extra";
+import {
+  outputFileSync,
+  remove,
+  existsSync,
+  outputJsonSync,
+  outputJSON,
+} from "fs-extra";
 const { sleep } = require("./tool");
 const startTime = new Date();
 import { join, isAbsolute } from "path";
@@ -14,16 +20,22 @@ import {
   done,
   info,
   logWithSpinner,
+  root,
 } from "../../cli-shared-utils";
 import { selectMap, replaceThings, timeout } from "../fetch/constant";
+
 const cwd = process.cwd();
-import pLimit from "p-limit";
-import { pRetryConsumer, pRetryProvider } from "./p-tools";
+import { pRetryConsumer, pRetryProvider, createLimit } from "./p-tools";
 import { setSlient } from "../../cli-shared-utils/lib/silence";
-const limit = pLimit(4);
+import resolvePkg from "../../utils/resolvePkg";
+
+function getCache() {
+  const cache = resolvePkg(root, "cache.json");
+  return cache;
+}
 let i = 0;
 
-const map = new Map<number, string>();
+const map = new Map<string, string>();
 
 // 使用 puppeteer 访问网址，获取对应内容
 /**
@@ -33,26 +45,31 @@ const map = new Map<number, string>();
  * @param i 第i个链接
  * @param savetxt 保存text的函数
  */
-async function fetch(
-  page: puppeteer.Page,
-  aas: string[],
-  i: number,
-  savetxt: (value: string) => void
-) {
+async function fetch(page: puppeteer.Page, aas: string[], i: number) {
   await page.goto(aas[i], {
     timeout,
   });
   const err = await page.waitForSelector("#content", {
     timeout,
   });
-  let txt = await page.$eval("#content", (c) => c.textContent);
+  let txt = await page.$eval<string>(
+    "#content",
+    (c) => c.textContent as string
+  );
   const title = await page.$eval("h1", (c) => c.textContent);
   replaceThings.forEach((value) => {
     txt = txt.replace(value, "");
   });
 
-  map.set(i, `${title}\n ${txt}\n`);
+  map.set(aas[i], `${title}\n ${txt}\n`);
   await sleep(10);
+}
+
+async function savetxt(outputFilePath: string, txt: string) {
+  outputFileSync(outputFilePath, txt, {
+    flag: "a",
+  });
+  logWithSpinner(`${i++} 写入完成 `);
 }
 
 function getMinutes(ms: number) {
@@ -71,6 +88,8 @@ export type TFetchNovelOption = {
   headless: boolean;
   quantity: number;
   isDebugger: boolean;
+  force: boolean;
+  limitNumber: number;
 };
 
 export default async function fetchNovel(option: TFetchNovelOption) {
@@ -81,10 +100,13 @@ export default async function fetchNovel(option: TFetchNovelOption) {
     headless = false,
     quantity,
     isDebugger = false,
+    force = false,
+    limitNumber = 3,
   } = option;
   if (isDebugger) {
     setSlient(false);
   }
+  const limit = createLimit(Number(limitNumber));
   try {
     (async () => {
       try {
@@ -94,33 +116,40 @@ export default async function fetchNovel(option: TFetchNovelOption) {
         });
         // 打开新的标签页
         const page = await browser.newPage();
+        await page.setUserAgent(
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
+        );
+        // await page.evaluate(async () => {
+        //   Object.defineProperty(navigator, 'webdriver', { get: ()=> false });
+        // });
         await page.goto(target, {
-          waitUntil: "domcontentloaded",
+          waitUntil: "load",
         });
         const isXbiquge = target.includes("xbiquge.la");
 
-        const content = await page.content();
-
         const urlStr = await page.url();
-        const arr = urlStr.match(/((http|https):\/\/)([^\/]+)(\/\S*)/);
+        const arr: Array<string> = urlStr.match(
+          /((http|https):\/\/)([^\/]+)(\/\S*)/
+        ) as string[];
 
         // 新笔趣阁和笔趣阁网页前缀不一致
 
         const prefix = isXbiquge ? `${arr[1]}${arr[3]}` : urlStr;
         const aSelector = selectMap[isXbiquge ? "xbiquge" : "biquge"].aSelector;
 
-        let aas = (
-          await page.$$eval<string[]>(aSelector, (aas) =>
-            aas.map((a) => a.getAttribute("href"))
-          )
-        ).map((a) => urljoin(prefix, a));
+        let aas = await page.$$eval<string[]>(
+          aSelector,
+          (aas) => aas.map((a) => a.getAttribute("href")) as string[]
+        );
 
-        console.log("quantity", quantity);
+        aas = aas.map((a) => urljoin(prefix, a));
 
         if (quantity && quantity > 0) {
           aas = aas.slice(0, quantity);
         }
-
+        const cache = getCache();
+        // 过滤掉在 cache 中有的 a 链接
+        const needFetchLinks = aas.filter((a) => !(a in cache));
         // gotNovelName 获取小说名称
         const titleSelectoror =
           selectMap[isXbiquge ? "xbiquge" : "biquge"].titleSelector;
@@ -154,12 +183,16 @@ export default async function fetchNovel(option: TFetchNovelOption) {
 
         try {
           const pool = [];
-          for (let i = 0; i < aas.length; i++) {
+          for (let i = 0; i < needFetchLinks.length; i++) {
             pool.push(
               limit(async () => {
                 resumeSpinner();
                 const _page = await browser.newPage();
-                const innerFn = async () => await fetch(_page, aas, i, savetxt);
+                await _page.setUserAgent(
+                  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
+                );
+                const innerFn = async () =>
+                  await fetch(_page, needFetchLinks, i);
                 const run = pRetryProvider(innerFn);
                 await pRetryConsumer(run);
                 await _page.close();
@@ -171,37 +204,39 @@ export default async function fetchNovel(option: TFetchNovelOption) {
           log("fetch 完成");
           await Promise.all(pool);
           log("开始写入文件");
-          Array.from(map.entries())
-            .sort(([a], [b]) => {
-              return a - b;
-            })
-            .forEach(([, text]) => {
-              savetxt(text);
-            });
+          aas.forEach((a) => {
+            if (a in cache) {
+              savetxt(outputFilePath, cache[a]);
+            } else {
+              const text = map.get(a);
+              cache[a] = text;
+              savetxt(outputFilePath, cache[a]);
+            }
+          });
+
+          outputJsonSync(`${root}/cache.json`, cache, "utf8");
         } catch (err) {
           console.log("error", err);
         }
         const endDate = new Date();
-        info("总共耗时" + getMinutes(endDate - startTime) + "minutes");
+        info(
+          "总共耗时" +
+            getMinutes(endDate.valueOf() - startTime.valueOf()) +
+            "minutes"
+        );
         await browser.close();
-        async function savetxt(txt: string) {
-          outputFileSync(outputFilePath, txt, {
-            flag: "a",
-          });
-          logWithSpinner(`${i++} 写入完成 `);
-        }
         done("下载完成");
         stopSpinner();
         process.exit(1);
       } catch (e) {
-        failSpinner(e);
+        failSpinner(e as string);
         error(e);
         process.exit(1);
       }
     })();
   } catch (e) {
     error(e);
-    failSpinner(e);
+    failSpinner(e as string);
     process.exit(1);
   }
 }

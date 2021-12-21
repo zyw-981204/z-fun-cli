@@ -57,7 +57,7 @@ export const error = (msg: any, tag = null) => {
   _log("error", tag, msg);
   if (msg instanceof Error) {
     console.error(msg.stack);
-    _log("error", tag, msg.stack);
+    _log("error", tag, msg.stack as string);
   }
 };
 

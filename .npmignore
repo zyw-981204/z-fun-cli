@@ -3,7 +3,6 @@ node_modules
 package-lock.json
  
 # source code
-lib
 .eslintrc.js
 .eslintignore
 .prettierrc

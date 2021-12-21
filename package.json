@@ -1,19 +1,18 @@
 {
-  "name": "my-cli",
-  "version": "1.0.0",
+  "name": "z-fun-cli",
+  "version": "0.0.1-5",
   "description": "",
-  "main": "lib/index.js",
+  "main": "dist/index.js",
   "bin": {
-    "zz": "./bin/index.js",
-    "tt": "./bin/tt.js"
+    "zz": "./bin/index.js"
   },
   "scripts": {
     "clean": "rimraf dist",
     "dev": "npm run clean && tsc -w",
-    "prepublish": "npm run clean && tsc",
-    "test": "npm unlink && npm link"
+    "test": "npm unlink && npm link",
+    "prepublishOnly": "rm -rd dist && tsc"
   },
-  "author": "",
+  "author": "zyw-981204",
   "license": "ISC",
   "devDependencies": {
     "@types/fs-extra": "^9.0.13",
@@ -29,23 +28,13 @@
     "rimraf": "^3.0.2",
     "typescript": "^4.5.4"
   },
-  "lint-staged": {
-    "*.{js,ts}": [
-      "prettier-eslint --write",
-      "eslint --fix",
-      "git add"
-    ]
-  },
   "dependencies": {
-    "@types/minimist": "^1.2.2",
-    "@vue/cli-shared-utils": "^4.5.15",
     "chalk": "^4.1.2",
     "commander": "^7.1.0",
     "download": "^8.0.0",
     "eslint-define-config": "^1.2.0",
     "eslint-plugin-node": "^11.1.0",
     "fs-extra": "^10.0.0",
-    "inquirer": "^8.2.0",
     "kolorist": "^1.5.1",
     "leven": "^3.0.0",
     "minimist": "^1.2.5",
@@ -55,7 +44,6 @@
     "prompts": "^2.4.2",
     "puppeteer": "^13.0.0",
     "strip-ansi": "^6.0.0",
-    "url": "^0.11.0",
     "url-join": "^4.0.1"
   }
 }

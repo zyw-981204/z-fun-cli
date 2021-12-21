@@ -8,6 +8,7 @@ import {
   chalkTag,
   info,
 } from "./cli-shared-utils";
+import { root } from "./cli-shared-utils/lib/path";
 import enhanceErrorMessages from "./core/command/enhanceErrorMessages";
 import { suggestCommands } from "./core/command/suggestCommand";
 
@@ -43,6 +44,8 @@ program
   .option("-n --novelName <novelName>", "download text name")
   .option("--headless", "is open the chrome hadless")
   .option("-q --quantity <quantity>", "download novel 数量")
+  .option("-f --force", "是否使用缓存")
+  .option("-l --limitNumber <value>", "限制同时下载的数量")
   .action(
     async (
       fetchTarget: string,

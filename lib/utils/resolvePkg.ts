@@ -1,11 +1,17 @@
 // 获取 pkg
-const fs = require("fs");
-const path = require("path");
-const readPkg = require("read-pkg");
+import fs from "fs";
+import path from "path";
 
-exports.resolvePkg = function (context) {
-  if (fs.existsSync(path.join(context, "package.json"))) {
-    return readPkg.sync({ cwd: context });
+export default function resolvePkg(context: string, jsonName = "package.json") {
+  if (fs.existsSync(path.join(context, jsonName))) {
+    console.log(1);
+    try {
+      const json = require(path.join(context, jsonName));
+      return json;
+    } catch (e) {
+      console.log("解析错误", e);
+      return {};
+    }
   }
   return {};
-};
+}

@@ -13,7 +13,12 @@ const { prefix, downloadPath, delay } = {
   delay: 1000,
 };
 
-export async function saveFile(dirname, fileName: string, content: string | Buffer, needClear?: boolean) {
+export async function saveFile(
+  dirname: string,
+  fileName: string,
+  content: string | Buffer,
+  needClear?: boolean
+) {
   const filePath = path.resolve(dirname, fileName);
   if (needClear) {
     fs.writeFileSync(filePath, "", {
@@ -28,7 +33,7 @@ export async function saveFile(dirname, fileName: string, content: string | Buff
   console.log("filePath", filePath, fileName, "写入完成");
 }
 
-export const clear = (pathString) => {
+export const clear = (pathString: string) => {
   const isAbs = path.isAbsolute(pathString);
   if (isAbs) {
     fs.writeFileSync(pathString, "", {
@@ -46,15 +51,20 @@ export const clear = (pathString) => {
 const imgReg = /.(jpg|png|gif|jepg)$/i;
 const htmlReg = /.html$/i;
 export const isHtml = (fileName: string) => !fileName.includes(".");
-export const isJs = (fileName: string) => fileName.includes(".") && fileName.endsWith("js");
+export const isJs = (fileName: string) =>
+  fileName.includes(".") && fileName.endsWith("js");
 export const isImg = (fileName: string) => imgReg.test(fileName);
 
-export const downloadImg = async (url, fileName) => {
+export const downloadImg = async (url: string, fileName: string) => {
   if (Array.isArray(url)) {
     const files = await Promise.all(
-      ["unicorn.com/foo.jpg", "cats.com/dancing.gif"].map((url) => download(url, "dist"))
+      ["unicorn.com/foo.jpg", "cats.com/dancing.gif"].map((url) =>
+        download(url, "dist")
+      )
     );
-    files.forEach((file) => fs.writeFileSync(`../download/latestHtml/${fileName}`, file));
+    files.forEach((file) =>
+      fs.writeFileSync(`../download/latestHtml/${fileName}`, file)
+    );
     return;
   }
   console.log("下载图片");
@@ -119,10 +129,10 @@ export function getFilePathByUrl(url: string) {
  * @param page puptter 实例
  * @param url 需要获取的url
  */
-export async function downloadNoFileHtml(page, url: string) {
+export async function downloadNoFileHtml(page:any, url: string) {
   try {
     await page.goto(url, { waitUntil: "load" });
-    const content = await page.content("html", (html) => html.innerHTML);
+    const content = await page.content("html", (html: Element) => html.innerHTML);
     const savePath = getFilePathByUrl(url);
     if (!existsSync(savePath)) {
       await makeDir(savePath);
@@ -139,7 +149,11 @@ export async function downloadNoFileHtml(page, url: string) {
  * @param fileName 文件名
  * @param filePath 文件路径
  */
-export async function downloadFile(url: string, fileName, filePath) {
+export async function downloadFile(
+  url: string,
+  fileName: string,
+  filePath: string
+) {
   const savePath = join(downloadPath, filePath);
   const saveFileName = join(downloadPath, filePath, fileName);
   // 不存在路径创建路径
@@ -184,19 +198,37 @@ export function uniqueUrl(urls: string[]) {
     */
   return Array.from(
     new Set([
-      ...urls.filter((v) => !/(void\(0\))|(^#+$)|(@)|(^http:\/\/)|javascript;/i.test(v)).map((v) => formatUrl(v)),
+      ...urls
+        .filter(
+          (v) => !/(void\(0\))|(^#+$)|(@)|(^http:\/\/)|javascript;/i.test(v)
+        )
+        .map((v) => formatUrl(v)),
     ])
   );
 }
 export async function getAllSourceUrls(page: Page, url: string) {
-  const urls = [];
+  const urls: string[] = [];
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  urls.push(...(await page.$$eval("[href]", (hrefs) => hrefs.map((v) => v.getAttribute("href")))));
-  urls.push(...(await page.$$eval("[link]", (links) => links.map((v) => v.getAttribute("link")))));
-  urls.push(...(await page.$$eval("[src]", (links) => links.map((v) => v.getAttribute("src")))));
+  urls.push(
+    ...(await page.$$eval<string[]>(
+      "[href]",
+      (hrefs) => hrefs.map((v) => v.getAttribute("href")) as string[]
+    ))
+  );
+  urls.push(
+    ...(await page.$$eval<string[]>(
+      "[link]",
+      (links) => links.map((v) => v.getAttribute("link")) as string[]
+    ))
+  );
+  urls.push(
+    ...(await page.$$eval<string[]>("[src]", (links) => {
+      return links.map((v) => v.getAttribute("src")) as string[];
+    }))
+  );
   return uniqueUrl(urls);
 }
 
-export async function sleep(delay: number) {
+export async function sleep(delay: number = 1000) {
   return new Promise((resolve) => setTimeout(resolve, delay));
 }
