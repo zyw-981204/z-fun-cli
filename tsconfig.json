@@ -2,10 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "rootDir": "lib",
-    "lib": [
-      "esnext",
-      "DOM",
-    ],
+    "lib": ["esnext", "DOM"],
     "module": "commonjs",
     "outDir": "dist",
     "allowJs": true,
@@ -15,19 +12,10 @@
     "suppressImplicitAnyIndexErrors": true,
     "esModuleInterop": true,
     "paths": {
-      "@/*": [
-        "./lib/*"
-      ],
-      "@cli-shared-utils": [
-        "./lib/cli-shared-utils/index"
-      ],
-      "@cli-shared-utils/*": [
-        "./lib/cli-shared-utils/*"
-      ]
+      "@/*": ["./lib/*"],
+      "@cli-shared-utils": ["./lib/cli-shared-utils/index"],
+      "@cli-shared-utils/*": ["./lib/cli-shared-utils/*"]
     }
   },
-  "include": [
-    "lib"
-  ],
-  "compileOnSave": true,
+  "include": ["lib"]
 }

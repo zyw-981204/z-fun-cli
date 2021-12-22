@@ -10,7 +10,6 @@ import {
 } from "./tool";
 
 const puppeteer = require("puppeteer");
-const path = require("path");
 
 // 初始化的网址
 const urls: string[] = ["https://www.pudeepharm.com//", "https://www.pudeepharm.com/aboutus/"];

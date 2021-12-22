@@ -1,5 +1,7 @@
 // to resolve node runningtime alias & package.json _moduleAliases
 // https://www.npmjs.com/package/module-alias
+// if wanted to learn mode about ts alias
+// visit https://zhuanlan.zhihu.com/p/298189197
 require("module-alias/register");
 
 import { program } from "commander";
@@ -17,6 +19,8 @@ const version = pkg.version;
 
 // set version
 program.version(version, "-v, --version", "output the current version");
+
+program.usage("z-fun-cli a collection of some awaresome tools");
 
 // test command
 program

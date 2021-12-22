@@ -1,2 +1,5 @@
+# .eslintignore
+
 dist
 node_modules
+bin
