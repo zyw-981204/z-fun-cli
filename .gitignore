@@ -1,5 +1,6 @@
 node_modules
 package-lock.json
+# dist 
 dist
-download
-fetch
+# fetch novel cache
+cache.json
