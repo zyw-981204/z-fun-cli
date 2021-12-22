@@ -2,10 +2,7 @@
 import { program } from "commander";
 import chalk from "chalk";
 
-const enhanceErroeMessages = (
-  methodName: string,
-  log: (...args: any[]) => void
-) => {
+const enhanceErroeMessages = (methodName: string, log: (...args: any[]) => void) => {
   // @ts-ignore
   program.Command.prototype[methodName] = function (...args: any[]) {
     if (methodName === "unknownOption" && this._allowUnknownOption) {

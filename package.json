@@ -10,7 +10,7 @@
     "clean": "rimraf dist",
     "dev": "npm run clean && tsc -w",
     "test": "npm unlink && npm link",
-    "prepublishOnly": "rm -rd dist && tsc"
+    "prepublishOnly": "rimraf dist && tsc"
   },
   "author": "zyw-981204",
   "license": "ISC",
@@ -36,6 +36,7 @@
     "kolorist": "^1.5.1",
     "leven": "^3.0.0",
     "minimist": "^1.2.5",
+    "module-alias": "^2.2.2",
     "ora": "^5.4.1",
     "p-limit": "^3.1.0",
     "p-retry": "^4.6.1",
@@ -43,5 +44,9 @@
     "puppeteer": "^13.0.0",
     "strip-ansi": "^6.0.0",
     "url-join": "^4.0.1"
+  },
+  "_moduleAliases": {
+    "@cli-shared-utils": "./dist/cli-shared-utils/",
+    "@": "./dist"
   }
 }

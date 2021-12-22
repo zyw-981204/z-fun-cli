@@ -1,7 +1,7 @@
 import pRetry from "p-retry";
-import { error, resumeSpinner, stopSpinner } from "../../cli-shared-utils";
-import { sleep } from "./tool";
 import pLimit from "p-limit";
+import { error, resumeSpinner, stopSpinner } from "@cli-shared-utils";
+import { sleep } from "./tool";
 
 /**
  *

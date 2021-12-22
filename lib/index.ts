@@ -1,12 +1,14 @@
+// to resolve node runningtime alias & package.json _moduleAliases
+// https://www.npmjs.com/package/module-alias
+require("module-alias/register");
+
 import { program } from "commander";
+import { logWithSpinner, stopSpinner, chalk, log } from "@cli-shared-utils";
+import enhanceErrorMessages from "@/core/command/enhanceErrorMessages";
+import { suggestCommands } from "@/core/command/suggestCommand";
 
-import { logWithSpinner, stopSpinner, chalk, log, chalkTag, info } from "./cli-shared-utils";
-import { root } from "./cli-shared-utils/lib/path";
-import enhanceErrorMessages from "./core/command/enhanceErrorMessages";
-import { suggestCommands } from "./core/command/suggestCommand";
-
-import type { TFetchNovelOption } from "./core/fetch/novel";
-import fetchNovel from "./core/fetch/novel";
+import type { TFetchNovelOption } from "@/core/fetch/novel";
+import fetchNovel from "@/core/fetch/novel";
 
 // pkg 的相对位置应该考虑 编译后的文件
 // 路径为dist/lib/index.js
@@ -29,6 +31,7 @@ program
     log("睡醒了");
   });
 
+// fetch command
 program
   .command("fetch <fetchTarget>")
   .description("下载小说")
@@ -48,11 +51,12 @@ program
     });
   });
 
+// create command
 program
   .command("create <appname>")
   .description("创建 app")
   .action(async () => {
-    require("./core/create/index");
+    require("@/core/create/index");
   });
 
 // command --help --no-debugger

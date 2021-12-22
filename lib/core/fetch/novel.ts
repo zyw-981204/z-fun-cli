@@ -1,5 +1,5 @@
 import * as puppeteer from "puppeteer";
-import { outputFileSync, remove, existsSync, outputJsonSync, outputJSON } from "fs-extra";
+import { outputFileSync, remove, existsSync, outputJsonSync } from "fs-extra";
 const { sleep } = require("./tool");
 const startTime = new Date();
 import { join, isAbsolute } from "path";
