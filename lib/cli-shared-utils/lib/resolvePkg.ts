@@ -4,7 +4,6 @@ import path from "path";
 
 export default function resolvePkg(context: string, jsonName = "package.json") {
   if (fs.existsSync(path.join(context, jsonName))) {
-    console.log(1);
     try {
       const json = require(path.join(context, jsonName));
       return json;

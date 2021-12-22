@@ -1,13 +1,6 @@
 import { program } from "commander";
 
-import {
-  logWithSpinner,
-  stopSpinner,
-  chalk,
-  log,
-  chalkTag,
-  info,
-} from "./cli-shared-utils";
+import { logWithSpinner, stopSpinner, chalk, log, chalkTag, info } from "./cli-shared-utils";
 import { root } from "./cli-shared-utils/lib/path";
 import enhanceErrorMessages from "./core/command/enhanceErrorMessages";
 import { suggestCommands } from "./core/command/suggestCommand";
@@ -29,8 +22,7 @@ program
   .description("utils test command")
   .option("-t --time <value>", "you can spinner form times")
   .action(async (options: { time?: string }) => {
-    const sleep = async (delay: number) =>
-      await new Promise((resolve) => setTimeout(resolve, delay));
+    const sleep = async (delay: number) => await new Promise((resolve) => setTimeout(resolve, delay));
     logWithSpinner("睡觉中");
     await sleep(Number(options.time));
     stopSpinner(true);
@@ -46,22 +38,15 @@ program
   .option("-q --quantity <quantity>", "download novel 数量")
   .option("-f --force", "是否使用缓存")
   .option("-l --limitNumber <value>", "限制同时下载的数量")
-  .action(
-    async (
-      fetchTarget: string,
-      options: Omit<TFetchNovelOption, "fetchTarget">
-    ) => {
-      console.log("fetchTarget", fetchTarget);
-      console.log("options", options);
-      log("--------------开始下载小说--------------------------");
-      log("开始下载小说" + fetchTarget);
-      logWithSpinner(`fetch ${chalk.yellow(fetchTarget)}`);
-      await fetchNovel({
-        fetchTarget,
-        ...options,
-      });
-    }
-  );
+  .action(async (fetchTarget: string, options: Omit<TFetchNovelOption, "fetchTarget">) => {
+    log("--------------开始下载小说--------------------------");
+    log("开始下载小说" + fetchTarget);
+    logWithSpinner(`fetch ${chalk.yellow(fetchTarget)}`);
+    await fetchNovel({
+      fetchTarget,
+      ...options,
+    });
+  });
 
 program
   .command("create <appname>")
@@ -96,8 +81,7 @@ enhanceErrorMessages("unknownOption", (optionName: string) => {
 
 enhanceErrorMessages("optionMissingArgument", (option: any, flag: any) => {
   return (
-    `Missing required argument for option ${chalk.yellow(option.flags)}` +
-    (flag ? `, got ${chalk.yellow(flag)}` : ``)
+    `Missing required argument for option ${chalk.yellow(option.flags)}` + (flag ? `, got ${chalk.yellow(flag)}` : ``)
   );
 });
 program.parse(process.argv);

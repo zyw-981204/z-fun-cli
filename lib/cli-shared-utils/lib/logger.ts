@@ -31,7 +31,7 @@ const format = (label: string, msg: string) => {
 
 export const chalkTag = (msg: string) => chalk.bgBlackBright.white.dim(` ${msg} `);
 
-export const log = (msg = "", tag = null) => {
+export const log = (msg = "", tag: any = null) => {
   tag ? console.log(format(chalkTag(tag), msg)) : console.log(msg);
   _log("log", tag, msg);
 };
