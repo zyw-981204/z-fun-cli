@@ -1,9 +1,5 @@
-// to resolve node runningtime alias & package.json _moduleAliases
-// https://www.npmjs.com/package/module-alias
-// if wanted to learn mode about ts alias
-// visit https://zhuanlan.zhihu.com/p/298189197
-require("module-alias/register");
-
+// add modules alias firstly
+import "./config/alias";
 import { program } from "commander";
 import { logWithSpinner, stopSpinner, chalk, log } from "@cli-shared-utils";
 import enhanceErrorMessages from "@/core/command/enhanceErrorMessages";
@@ -13,7 +9,6 @@ import type { TFetchNovelOption } from "@/core/fetch/novel";
 import fetchNovel from "@/core/fetch/novel";
 
 // pkg 的相对位置应该考虑 编译后的文件
-// 路径为dist/lib/index.js
 const pkg = require("../package.json");
 const version = pkg.version;
 
