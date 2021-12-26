@@ -1,6 +1,6 @@
 {
   "name": "z-fun-cli",
-  "version": "0.0.1-6",
+  "version": "0.0.1-7",
   "description": "",
   "main": "dist/index.js",
   "bin": {
@@ -12,7 +12,8 @@
     "test": "npm unlink && npm link",
     "prepublishOnly": "rimraf dist && tsc",
     "format": "prettier . --write",
-    "lint": "eslint . --fix"
+    "lint": "eslint . --fix",
+    "cz": "npx git-cz"
   },
   "author": "zyw-981204",
   "license": "ISC",
@@ -48,10 +49,6 @@
     "puppeteer": "^13.0.0",
     "strip-ansi": "^6.0.0",
     "url-join": "^4.0.1"
-  },
-  "_moduleAliases": {
-    "@cli-shared-utils": "./dist/cli-shared-utils/",
-    "@": "./dist"
   },
   "husky": {
     "hooks": {
